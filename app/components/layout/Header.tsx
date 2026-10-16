@@ -26,7 +26,7 @@ export function Header() {
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
+          <Link href="/" className="flex cursor-pointer items-center space-x-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-red-600">
               <Dumbbell className="h-6 w-6 text-white" />
             </div>
@@ -42,7 +42,7 @@ export function Header() {
               <Link
                 key={item.path}
                 href={item.path}
-                className={`text-sm font-medium transition-colors hover:text-orange-600 ${
+                className={`cursor-pointer text-sm font-medium transition-colors hover:text-orange-600 ${
                   isActive(item.path)
                     ? 'text-orange-600'
                     : 'text-gray-700'
@@ -65,7 +65,7 @@ export function Header() {
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden p-2"
+            className="md:hidden cursor-pointer p-2"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? (
@@ -85,7 +85,7 @@ export function Header() {
                   key={item.path}
                   href={item.path}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`text-sm font-medium transition-colors hover:text-orange-600 ${
+                  className={`cursor-pointer text-sm font-medium transition-colors hover:text-orange-600 ${
                     isActive(item.path)
                       ? 'text-orange-600'
                       : 'text-gray-700'
