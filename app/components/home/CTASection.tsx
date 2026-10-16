@@ -42,7 +42,7 @@ export function CTASection() {
 
   const contactInfo = [
     { icon: Phone, text: '+919871890607' },
-    { icon: Mail, text: 'fitwidprincmaile@g.com' },
+    { icon: Mail, text: 'transformwithprince@gmail.com' },
     { icon: MapPin, text: 'New Delhi,110059' },
   ];
 
