@@ -109,12 +109,14 @@ export function ChatWidget() {
     return () => window.removeEventListener("open-chat", handleOpenChat);
   }, []);
 
-  // Lock body scroll + keep chat inside visual viewport (iOS keyboard-safe)
+  // Lock body scroll + pin chat to visualViewport (fixes iOS zoom clipping Send)
   useEffect(() => {
     if (!isChatOpen || isMinimized) return;
 
     const prevOverflow = document.body.style.overflow;
+    const prevTouchAction = document.body.style.touchAction;
     document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
 
     const syncViewport = () => {
       const vv = window.visualViewport;
@@ -123,15 +125,26 @@ export function ChatWidget() {
         setViewportStyle({});
         return;
       }
+      // Use vv width/offsetLeft so a stuck iOS zoom can't push Send off-screen
       setViewportStyle({
         position: "fixed",
         top: `${vv.offsetTop}px`,
-        left: 0,
-        right: 0,
+        left: `${vv.offsetLeft}px`,
+        width: `${vv.width}px`,
         height: `${vv.height}px`,
+        right: "auto",
         bottom: "auto",
+        maxWidth: `${vv.width}px`,
+        overflowX: "hidden",
         paddingBottom: 0,
       });
+    };
+
+    const resetPageScroll = () => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollLeft = 0;
+      document.body.scrollLeft = 0;
+      syncViewport();
     };
 
     syncViewport();
@@ -139,14 +152,42 @@ export function ChatWidget() {
     vv?.addEventListener("resize", syncViewport);
     vv?.addEventListener("scroll", syncViewport);
     window.addEventListener("resize", syncViewport);
+    window.addEventListener("orientationchange", resetPageScroll);
     return () => {
       document.body.style.overflow = prevOverflow;
+      document.body.style.touchAction = prevTouchAction;
       vv?.removeEventListener("resize", syncViewport);
       vv?.removeEventListener("scroll", syncViewport);
       window.removeEventListener("resize", syncViewport);
+      window.removeEventListener("orientationchange", resetPageScroll);
       setViewportStyle({});
+      // Help iOS drop residual focus-zoom after chat closes
+      window.scrollTo(0, 0);
     };
   }, [isChatOpen, isMinimized]);
+
+  const handleInputBlur = () => {
+    // iOS often keeps page zoom after keyboard dismiss — nudge layout back
+    requestAnimationFrame(() => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollLeft = 0;
+      document.body.scrollLeft = 0;
+      const vv = window.visualViewport;
+      if (!vv || !window.matchMedia("(max-width: 639px)").matches) return;
+      setViewportStyle({
+        position: "fixed",
+        top: `${vv.offsetTop}px`,
+        left: `${vv.offsetLeft}px`,
+        width: `${vv.width}px`,
+        height: `${vv.height}px`,
+        right: "auto",
+        bottom: "auto",
+        maxWidth: `${vv.width}px`,
+        overflowX: "hidden",
+        paddingBottom: 0,
+      });
+    });
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -444,7 +485,7 @@ Medical Conditions: ${updated.diseases || "None"}
   return (
     <div
       ref={chatShellRef}
-      className="fixed inset-0 z-50 flex h-[100dvh] flex-col bg-white sm:inset-auto sm:bottom-24 sm:right-6 sm:h-[min(640px,calc(100vh-7rem))] sm:w-[400px] sm:rounded-2xl sm:border sm:border-gray-200 sm:shadow-2xl"
+      className="fixed inset-0 z-50 flex h-[100dvh] w-full max-w-[100vw] flex-col overflow-x-hidden bg-white sm:inset-auto sm:bottom-24 sm:right-6 sm:h-[min(640px,calc(100vh-7rem))] sm:w-[400px] sm:max-w-none sm:rounded-2xl sm:border sm:border-gray-200 sm:shadow-2xl"
       style={{
         paddingBottom: "env(safe-area-inset-bottom)",
         ...viewportStyle,
@@ -663,7 +704,7 @@ Medical Conditions: ${updated.diseases || "None"}
             </div>
           )}
 
-          <div className="flex items-center gap-2">
+          <div className="flex w-full min-w-0 items-center gap-2">
             <input
               ref={inputRef}
               type={
@@ -680,6 +721,7 @@ Medical Conditions: ${updated.diseases || "None"}
                   : setCurrentInput(e.target.value)
               }
               onKeyDown={handleKeyPress}
+              onBlur={handleInputBlur}
               placeholder={
                 currentStep === "goal"
                   ? "Or type a custom goal…"
@@ -693,9 +735,12 @@ Medical Conditions: ${updated.diseases || "None"}
                           ? "your.email@example.com"
                           : `e.g. ${getCurrentCountry().placeholder}`
               }
-              className="min-w-0 flex-1 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-orange-500"
+              // text-base (16px) prevents iOS Safari focus-zoom that never resets
+              className="min-w-0 flex-1 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-800 placeholder-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-orange-500"
               disabled={isSubmitting}
               enterKeyHint="send"
+              autoComplete="off"
+              autoCorrect="off"
             />
             <button
               type="button"
