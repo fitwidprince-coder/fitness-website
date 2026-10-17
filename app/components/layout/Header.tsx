@@ -13,13 +13,19 @@ export function Header() {
   const navItems = [
     { name: 'Home', path: '/' },
     { name: 'About', path: '/about' },
-    { name: 'Contact', path: '/contact' },
+    { name: 'Plans', path: '/#plans' },
     { name: 'Free Tools', path: '/tools' },
-    {name:"Recipes",path:"/recepies"},
-    { name: 'Blogs', path: '/blog' },
+    { name: 'FAQ', path: '/faq' },
+    { name: 'Recipes', path: '/recepies' },
+    { name: 'Blog', path: '/blog' },
+    { name: 'Contact', path: '/contact' },
   ];
 
-  const isActive = (path: string) => pathname === path;
+  const isActive = (path: string) => {
+    if (path.startsWith('/#')) return pathname === '/';
+    if (path === '/tools') return pathname === '/tools' || pathname.startsWith('/tools/');
+    return pathname === path;
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">

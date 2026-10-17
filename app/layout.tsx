@@ -5,6 +5,7 @@ import { Header } from "@/app/components/layout/Header";
 import { FloatingActions } from "@/app/components/FloatingActions";
 import { ChatWidget } from "@/app/components/ChatWidget";
 import { Toaster } from "@/app/components/ui/sonner";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,9 +18,18 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Prince Rajput Fitness & Nutrition",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${SITE_NAME} — Fitness Training & Nutrition`,
+    template: `%s | ${SITE_NAME}`,
+  },
   description:
     "Online fitness training and personalized nutrition coaching by Prince Rajput, expert trainer and nutritionist with 12+ years of experience.",
+  openGraph: {
+    siteName: SITE_NAME,
+    type: "website",
+    locale: "en_IN",
+  },
 };
 
 export default function RootLayout({

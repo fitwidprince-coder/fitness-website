@@ -88,8 +88,10 @@ export function ChatWidget() {
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [submittedPhones, setSubmittedPhones] = useState<string[]>([]);
+  const [viewportStyle, setViewportStyle] = useState<React.CSSProperties>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const chatShellRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const savedPhones = localStorage.getItem("submittedPhoneNumbers");
@@ -107,14 +109,61 @@ export function ChatWidget() {
     return () => window.removeEventListener("open-chat", handleOpenChat);
   }, []);
 
+  // Lock body scroll + keep chat inside visual viewport (iOS keyboard-safe)
+  useEffect(() => {
+    if (!isChatOpen || isMinimized) return;
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const syncViewport = () => {
+      const vv = window.visualViewport;
+      const isMobile = window.matchMedia("(max-width: 639px)").matches;
+      if (!isMobile || !vv) {
+        setViewportStyle({});
+        return;
+      }
+      setViewportStyle({
+        position: "fixed",
+        top: `${vv.offsetTop}px`,
+        left: 0,
+        right: 0,
+        height: `${vv.height}px`,
+        bottom: "auto",
+        paddingBottom: 0,
+      });
+    };
+
+    syncViewport();
+    const vv = window.visualViewport;
+    vv?.addEventListener("resize", syncViewport);
+    vv?.addEventListener("scroll", syncViewport);
+    window.addEventListener("resize", syncViewport);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      vv?.removeEventListener("resize", syncViewport);
+      vv?.removeEventListener("scroll", syncViewport);
+      window.removeEventListener("resize", syncViewport);
+      setViewportStyle({});
+    };
+  }, [isChatOpen, isMinimized]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isSubmitting]);
 
+  // Don't auto-open keyboard on goal step (chips-first UX); focus later steps only
   useEffect(() => {
-    if (currentStep !== "complete" && inputRef.current && !isSubmitting) {
-      setTimeout(() => inputRef.current?.focus(), 100);
+    if (
+      currentStep === "complete" ||
+      currentStep === "goal" ||
+      !inputRef.current ||
+      isSubmitting
+    ) {
+      return;
     }
+    const t = setTimeout(() => inputRef.current?.focus(), 120);
+    return () => clearTimeout(t);
   }, [currentStep, isSubmitting]);
 
   const getCurrentCountry = () =>
@@ -394,8 +443,12 @@ Medical Conditions: ${updated.diseases || "None"}
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col bg-white sm:inset-auto sm:bottom-24 sm:right-6 sm:h-[min(640px,calc(100vh-7rem))] sm:w-[400px] sm:rounded-2xl sm:border sm:border-gray-200 sm:shadow-2xl"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      ref={chatShellRef}
+      className="fixed inset-0 z-50 flex h-[100dvh] flex-col bg-white sm:inset-auto sm:bottom-24 sm:right-6 sm:h-[min(640px,calc(100vh-7rem))] sm:w-[400px] sm:rounded-2xl sm:border sm:border-gray-200 sm:shadow-2xl"
+      style={{
+        paddingBottom: "env(safe-area-inset-bottom)",
+        ...viewportStyle,
+      }}
     >
       {/* Compact header */}
       <div className="shrink-0 bg-gradient-to-r from-orange-600 to-red-600 px-3 py-2.5 text-white sm:rounded-t-2xl">
@@ -472,9 +525,9 @@ Medical Conditions: ${updated.diseases || "None"}
         )}
       </div>
 
-      {/* Messages */}
-      <div className="min-h-0 flex-1 overflow-y-auto bg-gradient-to-b from-gray-50 to-white p-3 sm:p-4">
-        <div className="space-y-3">
+      {/* Messages — stick to bottom (WhatsApp-style) to remove empty mid-gap */}
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-gradient-to-b from-gray-50 to-white p-3 sm:p-4">
+        <div className="flex min-h-full flex-col justify-end space-y-3">
           {messages.map((message, index) => (
             <div
               key={index}
@@ -532,9 +585,9 @@ Medical Conditions: ${updated.diseases || "None"}
         </div>
       </div>
 
-      {/* Input */}
+      {/* Input — always pinned above keyboard via visualViewport height */}
       {currentStep !== "complete" && (
-        <div className="shrink-0 border-t border-gray-200 bg-white p-3 sm:p-4">
+        <div className="shrink-0 border-t border-gray-200 bg-white p-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] sm:p-4">
           {currentStep === "phone" && (
             <div className="relative mb-2.5">
               <button
@@ -583,11 +636,11 @@ Medical Conditions: ${updated.diseases || "None"}
           )}
 
           {currentStep === "goal" && (
-            <div className="mb-2.5">
+            <div className="mb-2">
               <p className="mb-1.5 text-[11px] font-semibold text-gray-600">
                 Tap to select one or more goals:
               </p>
-              <div className="flex max-h-28 flex-wrap gap-1.5 overflow-y-auto sm:max-h-32">
+              <div className="flex max-h-[22vh] flex-wrap gap-1.5 overflow-y-auto sm:max-h-32">
                 {goals.map((goal) => {
                   const isSelected = selectedGoals.includes(goal.name);
                   return (
@@ -610,7 +663,7 @@ Medical Conditions: ${updated.diseases || "None"}
             </div>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <input
               ref={inputRef}
               type={
@@ -642,6 +695,7 @@ Medical Conditions: ${updated.diseases || "None"}
               }
               className="min-w-0 flex-1 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-orange-500"
               disabled={isSubmitting}
+              enterKeyHint="send"
             />
             <button
               type="button"
@@ -651,7 +705,7 @@ Medical Conditions: ${updated.diseases || "None"}
                   ? selectedGoals.length === 0 && !currentInput.trim()
                   : !currentInput.trim()) || isSubmitting
               }
-              className="flex shrink-0 cursor-pointer items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-red-600 px-3.5 py-2.5 text-white hover:from-orange-600 hover:to-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-red-600 text-white hover:from-orange-600 hover:to-red-700 disabled:cursor-not-allowed disabled:opacity-50"
               aria-label="Send"
             >
               {isSubmitting ? (

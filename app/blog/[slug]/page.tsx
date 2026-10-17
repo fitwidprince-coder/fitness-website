@@ -7,7 +7,8 @@ import { blogPosts } from "@/lib/blog-data";
 import { BlogContent } from "@/app/components/BlogContent";
 import { SocialShare } from "@/app/components/SocialShare";
 
-const BASE_URL = "https://yourwebsite.com";
+import { SITE_URL } from "@/lib/site";
+const BASE_URL = SITE_URL;
 
 interface BlogPostPageProps {
   params: Promise<{

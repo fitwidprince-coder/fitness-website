@@ -20,7 +20,7 @@ export function FloatingActions({ onChatClick }: FloatingActionsProps) {
       ),
       label: 'WhatsApp',
       bg: 'bg-green-500 hover:bg-green-600',
-      action: () => window.open('https://wa.me/your-number-here', '_blank'),
+      action: () => window.open('https://wa.me/919871890607', '_blank'),
     },
     {
       id: 'chat',
@@ -37,7 +37,7 @@ export function FloatingActions({ onChatClick }: FloatingActionsProps) {
       icon: <Phone className="h-6 w-6" />,
       label: 'Call',
       bg: 'bg-orange-500 hover:bg-orange-600',
-      action: () => window.location.href = 'tel:+1234567890',
+      action: () => window.location.href = 'tel:+919871890607',
     },
   ];
 

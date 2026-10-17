@@ -47,7 +47,7 @@ export function FAQSection() {
   ];
 
   return (
-    <section className="py-12 md:py-16 bg-gradient-to-br from-gray-50 via-white to-orange-50">
+    <section id="faq" className="py-12 md:py-16 bg-gradient-to-br from-gray-50 via-white to-orange-50">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <span className="inline-block rounded-full bg-blue-100 px-4 py-1 text-sm font-semibold text-blue-600 mb-4">
